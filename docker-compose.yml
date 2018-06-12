@@ -1,0 +1,98 @@
+version: '3.4'
+
+services:
+  agent:
+    image: portainer/agent
+    environment:
+      # REQUIRED: Should be equal to the service name prefixed by "tasks." when
+      # deployed inside an overlay network
+      AGENT_CLUSTER_ADDR: tasks.agent
+      # AGENT_PORT: 9001
+      # LOG_LEVEL: debug
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - agent_network
+    deploy:
+      mode: global
+      labels:
+        - "traefik.enable=false"
+
+  portainer:
+    image: portainer/portainer
+    command: -H tcp://tasks.agent:9001 --tlsskipverify
+    networks:
+      - agent_network
+      - proxied_network
+    ports:
+      - "9000"
+    volumes:
+      - portainer_data:/data
+    deploy:
+      labels:
+        - "traefik.docker.network=proxied"
+        - "traefik.backend=portainer"
+        - "traefik.frontend.rule=Host:$PORTAINER_HOSTNAME"
+        - "traefik.port=9000"
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+  proxy:
+    image: traefik
+    networks:
+      - proxied_network
+    environment:
+      - CLOUDFLARE_EMAIL=${CLOUDFLARE_EMAIL}
+      - CLOUDFLARE_API_KEY=${INPUT_CLOUDFLARE_APIKEY}
+    ports:
+      - "8080"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "sslcerts:/etc/acme/"
+    deploy:
+      labels:
+        - "traefik.frontend.rule=Host:${TRAEFIK_HOSTNAME}"
+        - "traefik.port=8080"
+        - "traefik.backend=traefik"
+        - "traefik.frontend.entryPoints=http"
+        - "traefik.enable=true"
+        - "traefik.protocol=http"
+      placement:
+        constraints:
+          - node.role == manager
+    command:
+      - "--api"
+      - "--debug"
+      - "--entrypoints=Name:http Address::80 Redirect.EntryPoint:https"
+      - "--entrypoints=Name:https Address::443 TLS"
+      - "--defaultentrypoints=http,https"
+      - "--acme"
+      - "--acme.dnschallenge=true"
+      - "--acme.dnschallenge.provider=cloudflare"
+      - "--acme.entryPoint=https"
+      - "--acme.onHostRule=true"
+      - "--acme.storage=/etc/acme/acme.json"
+      - "--acme.onDemand=false"
+      - "--acme.email=${LETSENCRYPT_EMAIL}"
+      - "--docker"
+      - "--docker.swarmMode"
+      - "--docker.domain=${DOCKER_DOMAIN}"
+      - "--docker.watch"
+
+networks:
+  proxied_network:
+    external:
+      name: proxied_network
+
+  agent_network:
+    driver: overlay
+
+volumes:
+  portainer_data:
+    driver: local
+  sslcerts:
+    driver: local
