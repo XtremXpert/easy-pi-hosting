@@ -25,6 +25,7 @@ So all I did is to make it easy to deploy all this together.
   
   ## Terminal installation part
   
+'''bash
   $ wget https://raw.githubusercontent.com/XtremXpert/easy-pi-hosting/master/install.sh
   $ wget https://raw.githubusercontent.com/XtremXpert/easy-pi-hosting/master/docker-compose.yml
   $ ./install.sh    
@@ -46,5 +47,4 @@ rvutx53six7xoh1rwb73w487l
 Creating network maestro_agent_network
 Creating service maestro_proxy
 Creating service maestro_agent
-Creating service maestro_portainer
-
+Creating service maestro_portainer'''
