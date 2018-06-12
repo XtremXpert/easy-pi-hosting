@@ -27,6 +27,7 @@ read -p "Adresse courriel de votre compte Cloudflare: " INPUT_CLOUDFLARE_EMAIL
 read -p "Clé d'API Global pour votre compte Cloudflare: " INPUT_CLOUDFLARE_APIKEY
 read -p "Nom de domaine pour Docker: " INPUT_DOCKER_DOMAIN
 
+docker swarm init
 docker network create -d overlay proxied_network
 
 PORTAINER_HOSTNAME=$INPUT_PORTAINER_HOSTNAME \
